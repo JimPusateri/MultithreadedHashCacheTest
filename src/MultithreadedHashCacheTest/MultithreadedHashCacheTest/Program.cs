@@ -1,44 +1,129 @@
-﻿using System.Runtime.Caching;
+﻿using MultithreadedHashCacheTest;
+using System.Collections.Concurrent;
+using System.Runtime.Caching;
 
 
 Console.WriteLine("Hello, World!");
 MemoryCache _memCache = MemoryCache.Default;
 
-var sleepTimeSpan = new TimeSpan(1000);
-Dictionary<string, object> _cache = new Dictionary<string, object>();
+var sleepTimeSpan = new TimeSpan(200);
+var safeDictionary = new SafeDictionary();
 
-var cacheTestTask = Task.Factory.StartNew(() =>
-{
+var biggerSafeDictionary = new SafeDictionary(disablePurge: true);
 
-    var miniCache = new Dictionary<string, object>();
-
-    for (int i = 0; i < 5000000; i++)
+    var tasks = new Task[]{
+ Task.Factory.StartNew(() =>
     {
-        var timeStamp = GetCacheSafeTimeStamp();
-        miniCache.Add(timeStamp, new object());
-    }
-    return miniCache;
-}).ContinueWith((minicache) =>
-{
-    var dict = minicache.Result;
-    var limit = dict.Count;
-    foreach(var timestamp in dict)
-        _cache.Add(timestamp.Key, new object());
-});
-await cacheTestTask;
 
-Console.WriteLine(_cache.Keys.Count);
+        var miniCache = new Dictionary<string, string>();
+
+        for (int i = 0; i < 1000000; i++)
+        {
+            var timeStamp = GetCacheSafeTimeStamp();
+            miniCache.Add(timeStamp, timeStamp);
+        }
+        return miniCache;
+    }, TaskCreationOptions.AttachedToParent).ContinueWith((minicache) =>
+    {
+        var dict = minicache.Result;
+        var limit = dict.Count;
+
+        foreach (var timestamp in dict)
+            biggerSafeDictionary.TryAdd(long.Parse(timestamp.Key), timestamp.Value);
+    }),
+ Task.Factory.StartNew(() =>
+    {
+
+        var miniCache = new Dictionary<string, string>();
+
+        for (int i = 0; i < 1000000; i++)
+        {
+            var timeStamp = GetCacheSafeTimeStamp();
+            miniCache.Add(timeStamp, timeStamp);
+        }
+        return miniCache;
+    }, TaskCreationOptions.AttachedToParent).ContinueWith((minicache) =>
+    {
+        var dict = minicache.Result;
+        var limit = dict.Count;
+
+        foreach (var timestamp in dict)
+            biggerSafeDictionary.TryAdd(long.Parse(timestamp.Key), timestamp.Value);
+    }),
+ Task.Factory.StartNew(() =>
+    {
+
+        var miniCache = new Dictionary<string, string>();
+
+        for (int i = 0; i < 1000000; i++)
+        {
+            var timeStamp = GetCacheSafeTimeStamp();
+            miniCache.Add(timeStamp, timeStamp);
+        }
+        return miniCache;
+    }, TaskCreationOptions.AttachedToParent).ContinueWith((minicache) =>
+    {
+        var dict = minicache.Result;
+        var limit = dict.Count;
+
+        foreach (var timestamp in dict)
+            biggerSafeDictionary.TryAdd(long.Parse(timestamp.Key), timestamp.Value);
+    }),
+ Task.Factory.StartNew(() =>
+    {
+
+        var miniCache = new Dictionary<string, string>();
+
+        for (int i = 0; i < 1000000; i++)
+        {
+            var timeStamp = GetCacheSafeTimeStamp();
+            miniCache.Add(timeStamp, timeStamp);
+        }
+        return miniCache;
+    }, TaskCreationOptions.AttachedToParent).ContinueWith((minicache) =>
+    {
+        var dict = minicache.Result;
+        var limit = dict.Count;
+
+        foreach (var timestamp in dict)
+            biggerSafeDictionary.TryAdd(long.Parse(timestamp.Key), timestamp.Value);
+    }),
+ Task.Factory.StartNew(() =>
+    {
+
+        var miniCache = new Dictionary<string, string>();
+
+        for (int i = 0; i < 1000000; i++)
+        {
+            var timeStamp = GetCacheSafeTimeStamp();
+            miniCache.Add(timeStamp, timeStamp);
+        }
+        return miniCache;
+    }, TaskCreationOptions.AttachedToParent).ContinueWith((minicache) =>
+    {
+        var dict = minicache.Result;
+        var limit = dict.Count;
+
+        foreach (var timestamp in dict)
+            biggerSafeDictionary.TryAdd(long.Parse(timestamp.Key), timestamp.Value);
+    })
+    };
+await Task.WhenAll(tasks);
+
+Console.WriteLine(biggerSafeDictionary.Count);
 
 
 string GetCacheSafeTimeStamp()
 {
     var dt = DateTime.Now;
-    var ts = dt.ToFileTimeUtc().ToString();
-    while (_memCache.Contains(ts))
+    var ts = dt.ToFileTimeUtc();
+    while (safeDictionary.Contains(new KeyValuePair<long, string>(ts, ts.ToString())))
     {
-        Thread.Sleep(sleepTimeSpan);
-        ts = dt.Add(sleepTimeSpan).ToFileTimeUtc().ToString();
+
+        ts = DateTime.Now.ToFileTimeUtc();
     }
-    _memCache.Add(ts, ts, DateTime.UtcNow.AddMilliseconds(220));
-    return ts;
+    if(safeDictionary.TryAdd(ts, ts.ToString()))
+        return ts.ToString();
+    
+    return GetCacheSafeTimeStamp();
 }
