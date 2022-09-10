@@ -7,11 +7,25 @@ MemoryCache _memCache = MemoryCache.Default;
 var sleepTimeSpan = new TimeSpan(1000);
 Dictionary<string, object> _cache = new Dictionary<string, object>();
 
-for(int i = 0; i<5000000;i++)
+var cacheTestTask = Task.Factory.StartNew(() =>
 {
-    var timeStamp = GetCacheSafeTimeStamp();
-    _cache.Add(timeStamp, new object());
-}
+
+    var miniCache = new Dictionary<string, object>();
+
+    for (int i = 0; i < 5000000; i++)
+    {
+        var timeStamp = GetCacheSafeTimeStamp();
+        miniCache.Add(timeStamp, new object());
+    }
+    return miniCache;
+}).ContinueWith((minicache) =>
+{
+    var dict = minicache.Result;
+    var limit = dict.Count;
+    foreach(var timestamp in dict)
+        _cache.Add(timestamp.Key, new object());
+});
+await cacheTestTask;
 
 Console.WriteLine(_cache.Keys.Count);
 
