@@ -11,6 +11,19 @@ var safeDictionary = new SafeDictionary();
 
 var biggerSafeDictionary = new SafeDictionary(disablePurge: true);
 
+await TryFiveMillion();
+
+
+Console.WriteLine(biggerSafeDictionary.Count);
+
+Thread.Sleep(new TimeSpan(0, 0, 30));
+
+await TryFiveMillion();
+
+Console.WriteLine(biggerSafeDictionary.Count);
+
+async Task TryFiveMillion()
+{
     var tasks = new Task[]{
  Task.Factory.StartNew(() =>
     {
@@ -108,9 +121,9 @@ var biggerSafeDictionary = new SafeDictionary(disablePurge: true);
             biggerSafeDictionary.TryAdd(long.Parse(timestamp.Key), timestamp.Value);
     })
     };
-await Task.WhenAll(tasks);
+    await Task.WhenAll(tasks);
+}
 
-Console.WriteLine(biggerSafeDictionary.Count);
 
 
 string GetCacheSafeTimeStamp()
